@@ -1,3 +1,4 @@
+import kivy.clock
 import pyglet
 import math
 import time
@@ -10,38 +11,11 @@ class Triangle(object):
 
         # Set vertices for the first time
         self.set_vertices(vertices)
-        print(vertices)
 
     def set_vertices(self, vertices):
         # Change the triangles vertices
         self.vertices = pyglet.graphics.vertex_list(3, ('v2f', vertices),
                                                     ('c3B', (100, 200, 220, 200, 100, 160, 200, 100, 250)))
-
-    """
-    def rotate(self, radius=100, offset=(0, 0)):
-        # y = sqrt(r^2-x^1)
-
-        for i in range(0, len(self.vertices_x)):
-            if self.vertices_x[i] - offset[0] > -radius and self.vertices_dir[i] == -1:
-                self.vertices_x[i] -= 1 - 0
-            elif self.vertices_x[i] - offset[0] <= -radius and self.vertices_dir[i] == -1:
-                self.vertices_x[i] += 1.0
-                self.vertices_dir[i] = -1
-            if self.vertices_x[i] - offset[0] < radius and self.vertices_dir[i] == 1:
-                self.vertices_x[i] += 1.0
-            elif self.vertices_x[i] - offset[0] >= radius and self.vertices_dir[i] == 1:
-                self.vertices_x[i] -= 1.0
-                self.vertices_dir[i] = 1
-
-        # Corresponding y vertices to the x vertices
-        vertices_y = list()
-        for x in self.vertices_x:
-            x -= offset[0]
-            vertices_y.append(round(math.sqrt(math.fabs(radius * radius - x * x + offset[1])), 1))
-
-        self.set_vertices((self.vertices_x[0], vertices_y[0],
-                           self.vertices_x[1], vertices_y[1],
-                           self.vertices_x[2], vertices_y[2]))"""
 
 
 class RotatingTriangle(Triangle):
@@ -63,14 +37,33 @@ class RotatingTriangle(Triangle):
         # Calculate all y coordinates for the x coordinates of all vertices
         for i in range(0, len(self.vertices_cords), 2):
             self.vertices_cords[i + 1] = self.calc_y(self.vertices_cords[i])
+        # Update triangle cords
+        self.set_vertices(self.vertices_cords)
 
-    def calc_y(self, x):
+    def convert_x(self, x):
+        # Remove any offset
+        x -= (self.center[0])
+        return x
+
+    def calc_y(self, x) -> float:
         # Change x to be relative to center
-        x -= self.center[1]
+        x = self.convert_x(x)
         # Calculate y with y = sqrt(r^2-x^1)
-        y = round(math.sqrt(math.fabs(self.radius * self.radius - x * x + self.center[1])), 1)
-        # Return the y coordinates
+        y = round(math.sqrt(math.fabs(self.radius * self.radius - x * x)), 1)
+        # Add center offset
+        y += self.center[1]
+        # Return the y coordinate
         return y
+
+    def rotate(self):
+        # Change each x coordinate by 1
+        for i in range(0, len(self.vertices_cords), 2):
+            # Figure out direction
+            x = self.vertices_cords[i]-(self.center[0])
+            if self.vertices_cords[i] - self.center[0] < self.radius:
+                self.vertices_cords[i] += 1
+            else:
+                self.vertices_cords[i] = self.center[0]-self.radius
 
 
 class Window(pyglet.window.Window):
@@ -81,24 +74,34 @@ class Window(pyglet.window.Window):
         # Debug parameter
         self.debug = debug
 
+        # Debug statement
+        if self.debug:
+            print('DEBUG: Creating window')
+
         # Configure window size
         self.set_size(900, 480)
 
         # Create a triangle
-        self.triangle = RotatingTriangle(vertices_x=(320.0, 450.0, 670.0), radius=150, center=(450, 240))
+        self.triangle = RotatingTriangle(vertices_x=(325.0, 450.0, 665.0), radius=350, center=(450, 100))
 
         # Set window title
-        self.set_caption('Triangle: Practice')
+        self.set_caption('Triangle Arc: Practice')
+
+        # Schedule Update event to run every 50ms
+        pyglet.clock.schedule_interval(func=self.update, interval=0.01)
 
     def on_draw(self):
         self.clear()
         self.triangle.vertices.draw(pyglet.graphics.GL_TRIANGLES)
 
-    def on_key_press(self, symbol, modifiers):
-        # Rotate triangles on key press 'r'
-        if symbol == pyglet.window.key.R:
-            #self.triangle.rotate(radius=250, offset=(200, 190))
-            pass
+    def on_resize(self, width, height):
+        self.on_draw()
+
+    def update(self, event=None):
+        self.triangle.rotate()
+        self.triangle.update_y_cords()
+        self.on_draw()
+
 
 def main():
     window = Window()
