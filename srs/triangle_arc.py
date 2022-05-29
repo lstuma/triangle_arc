@@ -45,7 +45,7 @@ class RotatingTriangle(Triangle):
         x -= (self.center[0])
         return x
 
-    def calc_y(self, x) -> float:
+    def calc_y(self, x) -> int:
         # Change x to be relative to center
         x = self.convert_x(x)
         # Calculate y with y = sqrt(r^2-x^1)
@@ -94,14 +94,10 @@ class Window(pyglet.window.Window):
         self.clear()
         self.triangle.vertices.draw(pyglet.graphics.GL_TRIANGLES)
 
-    def on_resize(self, width, height):
-        self.on_draw()
-
     def update(self, event=None):
         self.triangle.rotate()
         self.triangle.update_y_cords()
         self.on_draw()
-
 
 def main():
     window = Window()
